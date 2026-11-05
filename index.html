@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>학급 마니또 뽑기</title>
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #10b981;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background: var(--card-bg);
+      border-radius: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01);
+      border: 1px solid var(--border);
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 480px;
+      position: relative;
+    }
+
+    .title { font-size: 1.6rem; font-weight: 800; text-align: center; color: var(--primary); margin-bottom: 6px; }
+    .subtitle { font-size: 0.95rem; text-align: center; color: var(--text-muted); margin-bottom: 28px; }
+
+    .step { display: none; }
+    .step.active { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+    .btn-row { display: flex; gap: 10px; }
+    
+    button {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #f1f5f9; color: #475569; }
+    .btn-secondary:hover { background: #e2e8f0; }
+    .btn-danger { background: #fee2e2; color: var(--danger); }
+    .btn-danger:hover { background: #fecaca; }
+
+    .input-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.875rem; font-weight: 600; margin-bottom: 6px; color: #334155; }
+    input[type="text"], input[type="password"], textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      outline: none;
+      background: #f8fafc;
+    }
+    textarea { height: 130px; resize: vertical; line-height: 1.5; }
+
+    /* 파일 드롭존 스타일 */
+    .drop-zone {
+      border: 2px dashed #cbd5e1;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      background: #f8fafc;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 16px;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+    .drop-zone-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .drop-zone-text { font-size: 0.9rem; font-weight: 600; color: #475569; }
+    .drop-zone-sub { font-size: 0.78rem; color: #94a3b8; margin-top: 4px; }
+
+    /* 학생 셀렉터 Grid */
+    .name-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      gap: 10px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 4px;
+    }
+    .name-btn {
+      padding: 12px 8px;
+      background: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      text-align: center;
+    }
+    .name-btn.checked { background: #e2e8f0; color: #94a3b8; text-decoration: line-through; }
+
+    /* 비밀 마니또 카드 */
+    .manito-card {
+      background: #e0e7ff;
+      border: 2px dashed var(--primary);
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+      margin: 20px 0;
+    }
+    .manito-name { font-size: 2rem; font-weight: 800; color: var(--primary-hover); margin-top: 10px; }
+
+    /* 대시보드 테이블 */
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 0.9rem;
+    }
+    .result-table th, .result-table td {
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      text-align: center;
+    }
+    .result-table th { background: #f1f5f9; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <!-- Step 1: 모드 선택 -->
+  <div id="step-mode" class="step active">
+    <div class="title">🎁 학급 마니또</div>
+    <div class="subtitle">접속 모드를 선택해 주세요.</div>
+    <div class="btn-group">
+      <button class="btn-primary" onclick="goToStep('step-student-select')">👨‍🎓 학생 모드 (마니또 확인)</button>
+      <button class="btn-secondary" onclick="goToStep('step-teacher-auth')">🔒 선생님 모드 (관리자)</button>
+    </div>
+  </div>
+
+  <!-- Step 2-T1: 선생님 암호 인증 -->
+  <div id="step-teacher-auth" class="step">
+    <div class="title">선생님 인증</div>
+    <div class="subtitle">관리자 비밀번호를 입력해 주세요. (기본: 1234)</div>
+    <div class="input-group">
+      <input type="password" id="teacher-pin" placeholder="비밀번호 입력">
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="authTeacher()">로그인</button>
+      <button class="btn-secondary" onclick="goToStep('step-mode')">취소</button>
+    </div>
+  </div>
+
+  <!-- Step 2-T2: 선생님 대시보드 -->
+  <div id="step-teacher-dashboard" class="step">
+    <div class="title">⚙️ 마니또 관리자</div>
+    <div class="subtitle" id="status-summary">명렬표 TXT 파일을 업로드해 마니또를 추첨하세요.</div>
+
+    <!-- TXT 파일 드롭존 -->
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="drop-zone-icon">📁</div>
+      <div class="drop-zone-text">TXT 명렬표 파일 업로드 (클릭 또는 파일 드래그)</div>
+      <div class="drop-zone-sub">한 줄에 이름 한 명씩 입력된 .txt 파일만 가능</div>
+      <input type="file" id="file-input" accept=".txt" style="display:none;" onchange="handleFileUpload(event)">
+    </div>
+
+    <div class="input-group">
+      <label>불러온/입력된 명렬표 (수정 가능)</label>
+      <textarea id="paste-names" placeholder="TXT 파일을 올리거나&#10;이름을 직접 입력해 주세요.&#10;&#10;예시:&#10;홍길동&#10;김철수&#10;이영희"></textarea>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn-primary" onclick="setupManito()">🎲 마니또 추첨 및 저장하기</button>
+      <button class="btn-secondary" onclick="toggleResultTable()">👁️ 전체 연결 현황 보기</button>
+      <button class="btn-danger" onclick="resetAllData()">🗑️ 전체 데이터 초기화</button>
+      <button class="btn-secondary" onclick="goToStep('step-mode')">메인 화면으로</button>
+    </div>
+
+    <div id="result-table-area" style="display:none; margin-top: 20px;">
+      <h3 style="font-size:1rem; margin-bottom:8px;">전체 연결 명단</h3>
+      <table class="result-table">
+        <thead>
+          <tr><th>학생 이름</th><th>지정된 마니또</th><th>확인 여부</th></tr>
+        </thead>
+        <tbody id="result-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Step 2-S1: 학생 이름 선택 -->
+  <div id="step-student-select" class="step">
+    <div class="title">내 이름 찾기</div>
+    <div class="subtitle">자신의 이름을 클릭해 주세요.</div>
+    <div id="student-grid" class="name-grid"></div>
+    <div class="btn-group">
+      <button class="btn-secondary" onclick="goToStep('step-mode')">처음으로</button>
+    </div>
+  </div>
+
+  <!-- Step 2-S2: 마니또 확인 카드 -->
+  <div id="step-student-view" class="step">
+    <div class="title" id="student-greeting">OOO 학생</div>
+    <div class="subtitle">주변에 다른 친구가 없는지 확인하고 버튼을 누르세요!</div>
+
+    <div id="manito-secret-box" class="manito-card" style="display:none;">
+      <div>당신의 마니또는</div>
+      <div class="manito-name" id="assigned-manito-name">???</div>
+      <div style="margin-top:10px; font-size:0.85rem; color:var(--text-muted);">🤫 비밀을 꼭 지켜주세요!</div>
+    </div>
+
+    <div class="btn-group" id="reveal-btn-area">
+      <button class="btn-primary" onclick="revealManito()">👁️ 마니또 확인하기</button>
+    </div>
+
+    <div class="btn-group" id="close-btn-area" style="display:none;">
+      <button class="btn-secondary" onclick="finishStudentView()">확인 완료 (화면 덮기)</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const STORAGE_KEY = "CLASS_MANITO_DATA";
+  const TEACHER_PIN = "1234"; // 선생님 모드 기본 비밀번호
+
+  let state = {
+    students: [],
+    matches: {},
+    checked: {}
+  };
+
+  let selectedStudent = null;
+
+  window.onload = function() {
+    loadState();
+    setupDragAndDrop();
+  };
+
+  function loadState() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try { state = JSON.parse(saved); } catch(e) {}
+    }
+  }
+
+  function saveState() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function goToStep(stepId) {
+    document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+    document.getElementById(stepId).classList.add('active');
+
+    if (stepId === 'step-student-select') {
+      renderStudentGrid();
+    }
+  }
+
+  // Drag & Drop 처리
+  function setupDragAndDrop() {
+    const zone = document.getElementById('drop-zone');
+    ['dragenter', 'dragover'].forEach(eventName => {
+      zone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        zone.classList.add('dragover');
+      }, false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+      zone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+      }, false);
+    });
+    zone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files.length > 0) {
+        processFile(files[0]);
+      }
+    }, false);
+  }
+
+  function handleFileUpload(event) {
+    const file = event.target.files[0];
+    if (file) processFile(file);
+  }
+
+  function processFile(file) {
+    if (!file.name.endsWith('.txt')) {
+      alert('.txt 확장자 파일만 업로드할 수 있습니다.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('paste-names').value = e.target.result;
+      alert(`'${file.name}' 파일의 명렬표를 성공적으로 불러왔습니다.`);
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
+  // 선생님 관리 기능
+  function authTeacher() {
+    const pin = document.getElementById('teacher-pin').value;
+    if (pin === TEACHER_PIN) {
+      document.getElementById('teacher-pin').value = '';
+      updateTeacherSummary();
+      goToStep('step-teacher-dashboard');
+    } else {
+      alert("비밀번호가 올바르지 않습니다.");
+    }
+  }
+
+  function updateTeacherSummary() {
+    const summary = document.getElementById('status-summary');
+    if (state.students.length > 0) {
+      const checkedCount = Object.values(state.checked).filter(Boolean).length;
+      summary.innerText = `현재 총 ${state.students.length}명 등록됨 (확인 완료: ${checkedCount}명)`;
+      document.getElementById('paste-names').value = state.students.join('\n');
+    } else {
+      summary.innerText = "명렬표 TXT 파일을 업로드해 마니또를 추첨하세요.";
+    }
+  }
+
+  function setupManito() {
+    const rawText = document.getElementById('paste-names').value;
+    const names = rawText.split('\n').map(n => n.trim()).filter(n => n.length > 0);
+
+    if (names.length < 3) {
+      alert("마니또 추첨을 위해 최소 3명 이상의 이름을 입력해 주세요.");
+      return;
+    }
+
+    const uniqueNames = [...new Set(names)];
+    if (uniqueNames.length !== names.length) {
+      alert("중복된 이름이 있습니다. 동명이인은 '김철수A', '김철수B' 형태로 작성해 주세요.");
+      return;
+    }
+
+    let shuffled = [...names];
+    let isValid = false;
+    let attempts = 0;
+
+    while (!isValid && attempts < 1000) {
+      attempts++;
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      isValid = names.every((name, idx) => name !== shuffled[idx]);
+    }
+
+    if (!isValid) {
+      alert("추첨 중 오류가 발생했습니다. 다시 시도해 주세요.");
+      return;
+    }
+
+    state.students = names;
+    state.matches = {};
+    state.checked = {};
+
+    names.forEach((name, idx) => {
+      state.matches[name] = shuffled[idx];
+      state.checked[name] = false;
+    });
+
+    saveState();
+    updateTeacherSummary();
+    renderResultTable();
+    alert(`총 ${names.length}명의 마니또 추첨이 완료되었습니다!`);
+  }
+
+  function toggleResultTable() {
+    const area = document.getElementById('result-table-area');
+    if (area.style.display === 'none') {
+      renderResultTable();
+      area.style.display = 'block';
+    } else {
+      area.style.display = 'none';
+    }
+  }
+
+  function renderResultTable() {
+    const tbody = document.getElementById('result-table-body');
+    tbody.innerHTML = '';
+    state.students.forEach(name => {
+      const tr = document.createElement('tr');
+      const isChecked = state.checked[name] ? "✅ 확인함" : "⏳ 미확인";
+      tr.innerHTML = `<td>${name}</td><td><b>${state.matches[name] || '-'}</b></td><td>${isChecked}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function resetAllData() {
+    if (confirm("정말로 모든 마니또 데이터를 삭제하고 초기화하시겠습니까?")) {
+      state = { students: [], matches: {}, checked: {} };
+      localStorage.removeItem(STORAGE_KEY);
+      document.getElementById('paste-names').value = '';
+      updateTeacherSummary();
+      document.getElementById('result-table-area').style.display = 'none';
+      alert("초기화되었습니다.");
+    }
+  }
+
+  // 학생 마니또 확인 기능
+  function renderStudentGrid() {
+    const grid = document.getElementById('student-grid');
+    grid.innerHTML = '';
+
+    if (state.students.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:var(--text-muted); padding:20px;">아직 등록된 마니또 명단이 없습니다.<br>선생님께 문의해 주세요.</div>';
+      return;
+    }
+
+    state.students.forEach(name => {
+      const btn = document.createElement('button');
+      btn.className = `name-btn ${state.checked[name] ? 'checked' : ''}`;
+      btn.innerText = name;
+      btn.onclick = () => selectStudent(name);
+      grid.appendChild(btn);
+    });
+  }
+
+  function selectStudent(name) {
+    if (state.checked[name]) {
+      if (!confirm(`'${name}' 학생은 이미 마니또를 확인했습니다. 다시 확인하시겠습니까?`)) {
+        return;
+      }
+    } else {
+      if (!confirm(`'${name}' 학생이 맞습니까?`)) {
+        return;
+      }
+    }
+
+    selectedStudent = name;
+    document.getElementById('student-greeting').innerText = `${name} 학생`;
+    document.getElementById('manito-secret-box').style.display = 'none';
+    document.getElementById('reveal-btn-area').style.display = 'block';
+    document.getElementById('close-btn-area').style.display = 'none';
+    
+    goToStep('step-student-view');
+  }
+
+  function revealManito() {
+    const assigned = state.matches[selectedStudent];
+    document.getElementById('assigned-manito-name').innerText = assigned;
+    document.getElementById('manito-secret-box').style.display = 'block';
+    document.getElementById('reveal-btn-area').style.display = 'none';
+    document.getElementById('close-btn-area').style.display = 'block';
+
+    state.checked[selectedStudent] = true;
+    saveState();
+  }
+
+  function finishStudentView() {
+    selectedStudent = null;
+    goToStep('step-student-select');
+  }
+</script>
+
+</body>
+</html>
